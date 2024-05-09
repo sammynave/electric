@@ -6,7 +6,6 @@ defmodule Electric.Replication.Shapes.Querying do
   alias Electric.Replication.Eval
   alias Electric.Replication.Shapes.ChangeProcessing
   alias Electric.Replication.Shapes.ShapeRequest.Layer
-  alias Electric.Satellite.Permissions
   alias Electric.Utils
 
   import Electric.Postgres.Dialect.Postgresql, only: [quote_ident: 1]
@@ -61,9 +60,7 @@ defmodule Electric.Replication.Shapes.Querying do
       ) do
     case do_query_layer(conn, layer, relation_loader, origin, filtering_context, from) do
       {:ok, _, changes, graph} ->
-        {filtered_changes, filtered_graph} = apply_permissions(changes, graph, filtering_context)
-
-        {:ok, filtered_changes, filtered_graph}
+        {:ok, changes, graph}
 
       {:error, _} = error ->
         error
@@ -300,27 +297,5 @@ defmodule Electric.Replication.Shapes.Querying do
          tags: ShadowTableTransformation.convert_tag_list_pg_to_satellite(tags, origin)
        }}
     end)
-  end
-
-  defp apply_permissions(changes, graph, filtering_context) do
-    case filtering_context do
-      %{perms: perms, xid: xid} ->
-        {accepted_changes, rejected_changes} =
-          Permissions.Read.filter_shape_data(perms, graph, changes, xid)
-
-        filtered_graph =
-          Enum.reduce(rejected_changes, graph, fn {vertex, _change}, graph ->
-            Graph.delete_vertex(graph, vertex)
-          end)
-
-        {Map.new(accepted_changes), filtered_graph}
-
-      _ ->
-        Logger.warning(
-          "Not applying permissions to shape information: missing filtering context configuration"
-        )
-
-        {changes, graph}
-    end
   end
 end
