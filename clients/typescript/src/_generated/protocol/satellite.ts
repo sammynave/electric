@@ -4440,9 +4440,8 @@ export const SatClientCommand = {
   },
 
   create<I extends Exact<DeepPartial<SatClientCommand>, I>>(base?: I): SatClientCommand {
-    return SatClientCommand.fromPartial(base ?? {});
+    return SatClientCommand.fromPartial(base ?? ({} as any));
   },
-
   fromPartial<I extends Exact<DeepPartial<SatClientCommand>, I>>(object: I): SatClientCommand {
     const message = createBaseSatClientCommand();
     message.resetDatabase = (object.resetDatabase !== undefined && object.resetDatabase !== null)
@@ -4492,9 +4491,8 @@ export const SatClientCommand_ResetDatabase = {
   },
 
   create<I extends Exact<DeepPartial<SatClientCommand_ResetDatabase>, I>>(base?: I): SatClientCommand_ResetDatabase {
-    return SatClientCommand_ResetDatabase.fromPartial(base ?? {});
+    return SatClientCommand_ResetDatabase.fromPartial(base ?? ({} as any));
   },
-
   fromPartial<I extends Exact<DeepPartial<SatClientCommand_ResetDatabase>, I>>(
     object: I,
   ): SatClientCommand_ResetDatabase {
