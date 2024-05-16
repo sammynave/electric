@@ -1,0 +1,24 @@
+-- Check whether the table that's being electrified has a primary key
+-- Electrification is abort if not
+
+CREATE OR REPLACE PROCEDURE <%= schema() %>.__validate_table_primary_keys(table_oid regclass)
+SECURITY DEFINER AS $function$
+DECLARE
+    _con_type char;
+    _col_name text;
+BEGIN
+    FOR _con_type, _col_name IN
+        SELECT contype, attname
+        FROM pg_constraint
+        JOIN pg_attribute ON attrelid = conrelid AND attnum = ANY(conkey)
+        WHERE conrelid = table_oid
+        ORDER BY contype, attname
+    LOOP
+        IF _con_type = 'p' THEN
+            RETURN;
+        END IF;
+    END LOOP;
+
+    RAISE EXCEPTION E'Cannot electrify % because it doesn''t have a PRIMARY KEY.', table_oid::regclass;
+END;
+$function$ LANGUAGE PLPGSQL;

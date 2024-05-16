@@ -533,10 +533,10 @@ defmodule Electric.Postgres.ExtensionTest do
                |> String.trim()
     end
 
-    test_tx "rejects default column expressions", fn conn ->
+    test_tx "accepts default column expressions", fn conn ->
       assert [
                {:ok, [], []},
-               {:error, {:error, :error, _, :raise_exception, error_msg, _}}
+               {:ok, [], []}
              ] =
                :epgsql.squery(conn, """
                CREATE TABLE public.t1 (
@@ -548,21 +548,13 @@ defmodule Electric.Postgres.ExtensionTest do
                );
                CALL electric.electrify('public.t1');
                """)
-
-      assert error_msg ==
-               """
-               Cannot electrify t1 because some of its columns have DEFAULT expressions which are not currently supported by Electric:
-                 t1
-                 "Ts"
-               """
-               |> String.trim()
     end
 
-    test_tx "rejects columns with CHECK, UNIQUE or EXCLUDE constraints",
+    test_tx "accepts columns with CHECK, UNIQUE or EXCLUDE constraints",
             fn conn ->
               assert [
                        {:ok, [], []},
-                       {:error, {:error, :error, _, :raise_exception, error_msg, _}}
+                       {:ok, [], []}
                      ] =
                        :epgsql.squery(conn, """
                        CREATE TABLE public.t1 (
@@ -575,14 +567,6 @@ defmodule Electric.Postgres.ExtensionTest do
                        );
                        CALL electric.electrify('public.t1');
                        """)
-
-              # order insensitive testing for cols
-              assert "Cannot electrify t1 because some of its columns have CHECK, UNIQUE, EXCLUDE or user-defined constraints which are not currently supported by Electric:" <>
-                       column_names = error_msg
-
-              for col <- ["t1", ~s("Ts"), "uu"] do
-                assert column_names =~ ~r/#{col}/
-              end
             end
 
     test_tx "rejects tables with missing primary key", fn conn ->
