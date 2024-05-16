@@ -128,6 +128,11 @@ defmodule Electric.Postgres.Proxy.Injector do
 
     %{client: client, server: server} = Send.flush(send)
 
+    # we're assuming that the satements are valid because if they are rejected by the
+    # server, the tx will end up in a `failed` state and aborted, throwing away any
+    # accumlated state
+    state = State.mutate_schema(state, server)
+
     {:ok, {stack, state}, server, client}
   end
 

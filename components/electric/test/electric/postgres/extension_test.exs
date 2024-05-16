@@ -470,6 +470,13 @@ defmodule Electric.Postgres.ExtensionTest do
 
                CREATE TABLE public.t1 (
                  id UUID PRIMARY KEY,
+                 -- we support serial columns at electrification but not when granting write access
+                 ser2a smallserial,
+                 ser2b serial2,
+                 ser4a serial,
+                 ser4b serial4,
+                 ser8a bigserial,
+                 ser8b serial8,
                  content TEXT NOT NULL,
                  words VARCHAR,
                  num2a INT2,
@@ -493,6 +500,20 @@ defmodule Electric.Postgres.ExtensionTest do
                  shape shapes
                );
 
+               CALL electric.electrify('public.t1');
+               """)
+    end
+
+    test_tx "allows tables with serial primary keys", fn conn ->
+      # it's a good job we're allowing serial ids now, because our
+      # column type checks were failing to detect them: serial columns
+      # appear as simple integer types within pg_attribute
+      assert [{:ok, [], []}, {:ok, [], []}] ==
+               :epgsql.squery(conn, """
+               CREATE TABLE public.t1 (
+                   id serial8 primary key,
+                   value text
+               );
                CALL electric.electrify('public.t1');
                """)
     end

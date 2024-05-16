@@ -128,6 +128,11 @@ defmodule Electric.Postgres do
     ]a
   end
 
+  # Serial
+  def supported_types_read_only do
+    [:smallserial, :serial2, :serial, :serial4, :bigserial, :serial8 | supported_types()]
+  end
+
   def supported_types_only_in_functions, do: ~w|interval|a
 
   @display_settings [

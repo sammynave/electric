@@ -1,6 +1,8 @@
 defmodule Electric.Postgres.Proxy.Injector.Shadow do
   defstruct [:database]
 
+  use Electric.Postgres.MockSchemaLoader
+
   alias Electric.Postgres.Proxy.{
     Injector,
     Injector.Operation,
@@ -14,8 +16,13 @@ defmodule Electric.Postgres.Proxy.Injector.Shadow do
   @type t() :: %__MODULE__{}
 
   def injector do
+    spec = MockSchemaLoader.backend_spec()
+
+    {:ok, loader} =
+      SchemaLoader.connect(spec, [])
+
     Injector.new(
-      [loader: nil, capture_mode: [default: {__MODULE__, []}]],
+      [loader: loader, capture_mode: [default: {__MODULE__, []}]],
       username: "shadow"
     )
   end

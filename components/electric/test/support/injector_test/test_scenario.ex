@@ -111,7 +111,7 @@ defmodule Electric.Postgres.Proxy.TestScenario do
     M.NoticeResponse
   end
 
-  def parse_describe(sql, name \\ nil) do
+  def parse_describe(sql, name \\ "") do
     # would love to assert that the parse and describe messages
     # are passed as-is but getting the double incantations of this to work
     # and return the same names is tricky, and it's not **that** important
@@ -129,7 +129,7 @@ defmodule Electric.Postgres.Proxy.TestScenario do
     ]
   end
 
-  def parse_describe_sync(sql, name \\ nil) do
+  def parse_describe_sync(sql, name \\ "") do
     # would love to assert that the parse and describe messages
     # are passed as-is but getting the double incantations of this to work
     # and return the same names is tricky, and it's not **that** important
@@ -463,6 +463,10 @@ defmodule Electric.Postgres.Proxy.TestScenario do
     |> List.wrap()
     |> List.flatten()
     |> Enum.map(&to_struct_internal/1)
+  end
+
+  defp to_struct_internal(sql) when is_binary(sql) do
+    query(sql)
   end
 
   defp to_struct_internal(m) when is_atom(m) do

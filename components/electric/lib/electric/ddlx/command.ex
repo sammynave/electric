@@ -18,6 +18,8 @@ defmodule Electric.DDLX.Command do
           tables: [Electric.Postgres.relation()]
         }
 
+  @privileges Electric.Satellite.Permissions.privileges()
+
   def tag(%__MODULE__{tag: tag}) do
     tag
   end
@@ -177,7 +179,7 @@ defmodule Electric.DDLX.Command do
     role
   end
 
-  defp fingerprint(priv) when priv in [:SELECT, :INSERT, :UPDATE, :DELETE] do
+  defp fingerprint(priv) when priv in @privileges do
     to_string(priv)
   end
 

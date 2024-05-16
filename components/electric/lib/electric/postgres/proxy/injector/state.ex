@@ -1,13 +1,41 @@
 defmodule Electric.Postgres.Proxy.Injector.State do
   alias PgProtocol.Message, as: M
+  alias Electric.Postgres
+  alias Electric.Postgres.Extension.SchemaLoader
 
   defmodule Tx do
+    alias Electric.Satellite.SatPerms
     @moduledoc false
     # holds information about the current transaction
 
-    defstruct electrified: false, version: nil, tables: %{}
+    defstruct electrified: false,
+              version: nil,
+              tables: %{},
+              rules: nil,
+              schema: nil,
+              stmts: %{},
+              binds: %{}
 
-    @type t() :: %__MODULE__{electrified: boolean(), version: nil | String.t()}
+    @type t() :: %__MODULE__{
+            electrified: boolean(),
+            version: nil | String.t(),
+            rules: nil | %SatPerms.Rules{},
+            schema: nil | Postgres.Schema.t(),
+            stmts: %{String.t() => String.t()},
+            binds: %{String.t() => String.t()}
+          }
+
+    def new(loader) do
+      {:ok, rules} = SchemaLoader.global_permissions(loader)
+      # TODO: this schema version could be inconsistent with the database
+      # there could be a migration in the replication stream that hasn't reached
+      # our state maintenance consumer (MigrationConsumer)
+      # Perhaps we could move the schema mutation/update to within the proxy itself
+      # and provide a way to retrieve based on txid or something
+      {:ok, schema_version} = SchemaLoader.load(loader)
+
+      %__MODULE__{rules: rules, schema: schema_version.schema}
+    end
 
     def electrify_table(tx, {schema, table}) do
       Map.update!(tx, :tables, &Map.put(&1, {schema, table}, true))
@@ -45,7 +73,7 @@ defmodule Electric.Postgres.Proxy.Injector.State do
   """
   @spec begin(t()) :: t()
   def begin(%__MODULE__{} = state) do
-    %{state | tx: %Tx{}}
+    %{state | tx: Tx.new(state.loader)}
   end
 
   @doc """
@@ -83,7 +111,8 @@ defmodule Electric.Postgres.Proxy.Injector.State do
 
   @spec electrify(t(), {String.t(), String.t()}) :: t()
   def electrify(%__MODULE__{} = state, {_schema, _name} = table) do
-    electrify(state)
+    state
+    |> electrify()
     |> maybe_update_tx(&Tx.electrify_table(&1, table))
   end
 
@@ -138,6 +167,14 @@ defmodule Electric.Postgres.Proxy.Injector.State do
     :error
   end
 
+  def permissions_rules(%__MODULE__{tx: nil, loader: loader}) do
+    SchemaLoader.global_permissions(loader)
+  end
+
+  def permissions_rules(%__MODULE__{tx: %{rules: rules}}) do
+    {:ok, rules}
+  end
+
   @doc """
   Assign a version to the current transaction.
   """
@@ -165,5 +202,49 @@ defmodule Electric.Postgres.Proxy.Injector.State do
     Map.get_and_update!(state, :metadata, fn m ->
       {Map.fetch(m, :version), Map.delete(m, :version)}
     end)
+  end
+
+  def mutate_schema(%__MODULE__{tx: nil} = state, _msgs) do
+    state
+  end
+
+  def mutate_schema(%__MODULE__{tx: tx} = state, msgs) do
+    tx = Enum.reduce(msgs, tx, &apply_msgs_tx/2)
+    # dbg(tx)
+    %{state | tx: tx}
+  end
+
+  defp apply_msgs_tx(%M.Parse{} = msg, tx) do
+    Map.update!(tx, :stmts, &Map.put(&1, msg.name, msg.query))
+  end
+
+  defp apply_msgs_tx(%M.Query{} = msg, tx) do
+    update_schema(msg.query, tx)
+  end
+
+  defp apply_msgs_tx(%M.Bind{} = msg, tx) do
+    Map.update!(tx, :binds, &Map.put(&1, msg.portal, msg.source))
+  end
+
+  defp apply_msgs_tx(%M.Execute{} = msg, tx) do
+    {name, binds} = Map.pop!(tx.binds, msg.portal)
+    {stmt, stmts} = Map.pop!(tx.stmts, name)
+
+    update_schema(stmt, %{tx | binds: binds, stmts: stmts})
+  end
+
+  defp apply_msgs_tx(_msg, tx) do
+    tx
+  end
+
+  defp update_schema(stmt, tx) do
+    schema = Postgres.Schema.update(tx.schema, stmt, oid_loader: &oid_loader/3)
+
+    %{tx | schema: schema}
+  end
+
+  # we don't need real oids
+  defp oid_loader(type, schema, name) do
+    {:ok, Enum.join(["#{type}", schema, name], ".") |> :erlang.phash2(50_000)}
   end
 end
