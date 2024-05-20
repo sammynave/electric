@@ -203,6 +203,7 @@ defimpl QueryAnalyser, for: PgQuery.AlterTableStmt do
     perms = write_permissions(stmt, state)
 
     stmt.cmds
+    |> dbg
     |> Enum.map(&unwrap_node/1)
     |> Enum.reduce_while(
       %{analysis | tx?: true, action: {:alter, "table"}},
@@ -594,6 +595,7 @@ defimpl QueryAnalyser, for: PgQuery.CallStmt do
   alias Electric.Postgres.Proxy.Errors
   alias Electric.Postgres.Proxy.Parser
   alias Electric.Satellite.SatPerms
+  alias Electric.Postgres.Proxy.Injector
 
   def analyse(stmt, analysis, state) do
     case extract_electric(stmt, analysis) do
@@ -608,7 +610,6 @@ defimpl QueryAnalyser, for: PgQuery.CallStmt do
       {:electric, command, analysis} ->
         # TODO: the new grant syntax will result in multiple tables being involved.
         #       is this analysis.table field being used for anything after this point?
-
         {:ok, table} =
           command
           |> DDLX.Command.table_names()
@@ -657,26 +658,34 @@ defimpl QueryAnalyser, for: PgQuery.CallStmt do
   end
 
   defp validate_action(analysis, %{action: %SatPerms.DDLX{} = ddlx}, state) do
-    Enum.reduce_while(ddlx.grants, analysis, &validate_grant(&1, &2, state.tx.schema))
+    schema = Injector.State.schema!(state)
+
+    case Electric.Postgres.Schema.Validator.validate_schema_for_permissions(schema, ddlx) do
+      {:ok, _warnings} ->
+        analysis
+
+      {:error, reason} ->
+        %{analysis | allowed?: false}
+    end
+
+    # Enum.reduce_while(ddlx.grants, analysis, &validate_grant(&1, &2, schema))
   end
 
   defp validate_action(analysis, _command, _state) do
     analysis
   end
 
-  @write_privs Electric.Satellite.Permissions.write_privileges()
+  # defp validate_grant(%SatPerms.Grant{privilege: privilege} = grant, analysis, schema)
+  #      when privilege in @write_privs do
+  #   %{table: %{schema: sname, name: name}} = grant
+  #   table_schema = Schema.fetch_table!(schema, {sname, name}) |> dbg
 
-  defp validate_grant(%SatPerms.Grant{privilege: privilege} = grant, analysis, schema)
-       when privilege in @write_privs do
-    %{table: %{schema: sname, name: name}} = grant
-    table_schema = Schema.fetch_table!(schema, {sname, name}) |> dbg
+  #   {:cont, analysis}
+  # end
 
-    {:cont, analysis}
-  end
-
-  defp validate_grant(_grant, analysis, _schema) do
-    {:cont, analysis}
-  end
+  # defp validate_grant(_grant, analysis, _schema) do
+  #   {:cont, analysis}
+  # end
 
   defp parse_table_name([], _opts), do: {:ok, nil}
   defp parse_table_name([{_schema, _name} = table_name | _], _opts), do: {:ok, table_name}

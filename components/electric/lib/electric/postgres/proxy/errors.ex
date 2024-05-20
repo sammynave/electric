@@ -91,6 +91,8 @@ defmodule Electric.Postgres.Proxy.Errors do
     }
   end
 
+  def cannot_grant_write_permissions()
+
   defp format_constraint(:CONSTR_CHECK), do: "CHECK"
   defp format_constraint(:CONSTR_GENERATED), do: "GENERATED"
   defp format_constraint(:CONSTR_FOREIGN), do: "FOREIGN KEY"

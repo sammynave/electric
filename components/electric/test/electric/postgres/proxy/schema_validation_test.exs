@@ -136,9 +136,14 @@ defmodule Electric.Postgres.Proxy.SchemaValidationTest do
   @schemas [
     {"column_unique_constraints",
      [
-       "id serial8 PRIMARY KEY",
+       "id uuid PRIMARY KEY",
        "value text NOT NULL",
        "tag text UNIQUE"
+     ]},
+    {"serial_primary_key",
+     [
+       "id serial8 PRIMARY KEY",
+       "value text NOT NULL"
      ]}
   ]
   @scenarios [Simple, Extended]

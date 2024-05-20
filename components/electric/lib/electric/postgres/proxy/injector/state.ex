@@ -247,4 +247,12 @@ defmodule Electric.Postgres.Proxy.Injector.State do
   defp oid_loader(type, schema, name) do
     {:ok, Enum.join(["#{type}", schema, name], ".") |> :erlang.phash2(50_000)}
   end
+
+  def schema!(%__MODULE__{tx: nil}) do
+    raise "Not in transaction"
+  end
+
+  def schema!(%__MODULE__{tx: tx}) do
+    tx.schema
+  end
 end
