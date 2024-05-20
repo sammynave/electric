@@ -98,6 +98,26 @@ if config_env() in [:dev, :test] do
 end
 
 ###
+# Telemetry
+###
+
+send_to_honeycomb? = env!("HONEYCOMB_ENABLED", :boolean)
+
+if send_to_honeycomb? do
+  honeycomb_api_key = env!("HONEYCOMB_API_KEY", :string, "")
+
+  config :opentelemetry_exporter,
+    otlp_endpoint: "https://api.honeycomb.io",
+    otlp_headers: [{"x-honeycomb-team", honeycomb_api_key}],
+    otlp_compression: :gzip
+else
+  config :opentelemetry, :processors,
+    otel_simple_processor: %{
+      exporter: {:otel_exporter_stdout, []}
+    }
+end
+
+###
 # Required options
 ###
 
