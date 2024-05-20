@@ -90,6 +90,11 @@ defmodule Electric.MixProject do
 
   defp telemetry_deps do
     [
+      {:opentelemetry_exporter, "~> 1.7"},
+      {:opentelemetry_api, "~> 1.3"},
+      {:opentelemetry, "~> 1.4"},
+      {:opentelemetry_bandit, "~> 0.1.4"},
+      {:opentelemetry_ecto, "~> 1.2"},
       {:telemetry, "~> 1.1", override: true},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"}

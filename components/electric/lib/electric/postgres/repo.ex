@@ -15,6 +15,7 @@ defmodule Electric.Postgres.Repo do
 
   alias Electric.Replication.Connectors
 
+  @telemetry_prefix [:electric, :repo]
   @default_pool_size 10
 
   def config(connector_config, opts) do
@@ -31,9 +32,12 @@ defmodule Electric.Postgres.Repo do
       ssl: conn_opts.ssl == :required,
       pool_size: Keyword.get(opts, :pool_size, @default_pool_size),
       log: false,
-      after_connect: {__MODULE__, :set_display_settings, []}
+      after_connect: {__MODULE__, :set_display_settings, []},
+      telemetry_prefix: @telemetry_prefix
     ]
   end
+
+  def telemetry_prefix, do: @telemetry_prefix
 
   def name(origin), do: :"#{inspect(__MODULE__)}:#{origin}"
 
