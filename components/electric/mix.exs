@@ -72,7 +72,8 @@ defmodule Electric.MixProject do
       {:ecto_sql, "~> 3.11"},
       {:ecto, "~> 3.11"},
       {:dotenvy, "~> 0.8"},
-      {:timex, "~> 3.7"}
+      {:timex, "~> 3.7"},
+      {:tls_certificate_check, "~> 1.22"}
     ]
   end
 

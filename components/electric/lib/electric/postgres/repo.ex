@@ -28,7 +28,9 @@ defmodule Electric.Postgres.Repo do
       username: conn_opts.username,
       password: conn_opts.password,
       database: conn_opts.database,
-      ssl: conn_opts.ssl == :required,
+      ssl: Map.get(conn_opts, :ssl_opts, false),
+      # Pass TCP options to repo's database connector. Possible options include `:inet6`.
+      socket_options: Map.get(conn_opts, :tcp_opts, []),
       pool_size: Keyword.get(opts, :pool_size, @default_pool_size),
       log: false,
       after_connect: {__MODULE__, :set_display_settings, []}

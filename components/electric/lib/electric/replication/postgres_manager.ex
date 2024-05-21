@@ -309,10 +309,24 @@ defmodule Electric.Replication.PostgresConnectorMng do
     end)
   end
 
-  def force_ssl_mode(connector_config, ssl_mode?) do
-    new_ssl_value = if ssl_mode?, do: :required, else: false
+  defp force_ssl_mode(connector_config, ssl_mode?) do
+    if ssl_mode? do
+      put_in(connector_config, [:connection, :ssl], :required)
+    else
+      Keyword.update!(connector_config, :connection, fn conn_opts ->
+        conn_opts
+        # TODO: wrap these into "update_ssl_opts" function
+        |> Keyword.put(:ssl, false)
+        |> Keyword.delete(:ssl_opts)
+      end)
+    end
 
-    put_in(connector_config, [:connection, :ssl], new_ssl_value)
+    # Keyword.update!(connector_config, :connection, fn conn_opts ->
+    #   conn_opts
+    #   |> Keyword.put(:ssl, new_ssl_value)
+    #   |> maybe_put_sni()
+    #   |> maybe_verify_peer()
+    # end)
   end
 
   # Perform a DNS lookup for an IPv6 IP address, followed by a lookup for an IPv4 address in case the first one fails.
@@ -338,46 +352,57 @@ defmodule Electric.Replication.PostgresConnectorMng do
 
   defp maybe_put_sni(conn_opts) do
     if conn_opts[:ssl] do
-      sni_opt = {:server_name_indication, String.to_charlist(conn_opts[:host])}
-      update_in(conn_opts, [:ssl_opts], &[sni_opt | List.wrap(&1)])
+      update_ssl_opts(
+        conn_opts,
+        &Keyword.put(&1, :server_name_indication, String.to_charlist(conn_opts[:host]))
+      )
     else
       conn_opts
     end
   end
 
   defp maybe_verify_peer(conn_opts) do
-    if conn_opts[:ssl] == :required do
-      ssl_opts = get_verify_peer_opts()
-      update_in(conn_opts, [:ssl_opts], &(ssl_opts ++ List.wrap(&1)))
+    if conn_opts[:ssl] do
+      update_ssl_opts(conn_opts, &Keyword.merge(&1, get_verify_peer_opts(conn_opts[:host])))
     else
       conn_opts
     end
   end
 
-  defp get_verify_peer_opts do
-    case :public_key.cacerts_load() do
-      :ok ->
-        cacerts = :public_key.cacerts_get()
-        Logger.info("Successfully loaded #{length(cacerts)} cacerts from the OS")
+  defp get_verify_peer_opts(hostname) do
+    :tls_certificate_check.options(hostname) |> IO.inspect()
+    # case :public_key.cacerts_load() do
+    #   :ok ->
+    #     cacerts = :public_key.cacerts_get()
+    #     Logger.info("Successfully loaded #{length(cacerts)} cacerts from the OS")
 
-        [
-          verify: :verify_peer,
-          cacerts: cacerts,
-          customize_hostname_check: [
-            # Use a custom match function to support wildcard CN in server certificates.
-            # For example, CN = *.us-east-2.aws.neon.tech
-            match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
-          ]
-        ]
+    #     [
+    #       verify: :verify_peer,
+    #       cacerts: cacerts,
+    #       customize_hostname_check: [
+    #         # Use a custom match function to support wildcard CN in server certificates.
+    #         # For example, CN = *.us-east-2.aws.neon.tech
+    #         match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+    #       ]
+    #     ]
 
-      {:error, reason} ->
-        Logger.warning("Failed to load cacerts from the OS: #{inspect(reason)}")
-        # We're not sure how reliable OS certificate stores are in general, so keep going even
-        # if the loading of cacerts has failed. A warning will be logged every time a new
-        # database connection is established without the `verify_peer` option, so the issue will be
-        # visible to the developer.
-        []
-    end
+    #   {:error, reason} ->
+    #     Logger.warning("Failed to load cacerts from the OS: #{inspect(reason)}")
+    #     # We're not sure how reliable OS certificate stores are in general, so keep going even
+    #     # if the loading of cacerts has failed. A warning will be logged every time a new
+    #     # database connection is established without the `verify_peer` option, so the issue will be
+    #     # visible to the developer.
+    #     []
+    # end
+  end
+
+  defp update_ssl_opts(conn_opts, fun) do
+    ssl_opts =
+      conn_opts
+      |> Keyword.get(:ssl_opts, [])
+      |> fun.()
+
+    Keyword.put(conn_opts, :ssl_opts, ssl_opts)
   end
 
   defp fallback_to_nossl(state) do
