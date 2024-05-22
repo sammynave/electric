@@ -4,6 +4,7 @@ defmodule Electric.Replication.PostgresConnector do
   require Logger
 
   alias Electric.Replication.Connectors
+  alias Electric.Replication.ConnectionPoolObserver
   alias Electric.Replication.PostgresConnectorMng
   alias Electric.Replication.PostgresConnectorSup
 
@@ -18,7 +19,11 @@ defmodule Electric.Replication.PostgresConnector do
     name = name(origin)
     Electric.reg(name)
 
-    children = [%{id: :mng, start: {PostgresConnectorMng, :start_link, [connector_config]}}]
+    children = [
+      {ConnectionPoolObserver, origin},
+      {PostgresConnectorMng, connector_config}
+    ]
+
     Supervisor.init(children, strategy: :one_for_all)
   end
 
@@ -30,7 +35,7 @@ defmodule Electric.Replication.PostgresConnector do
     Supervisor.start_child(
       connector,
       %{
-        id: :sup,
+        id: PostgresConnectorSup,
         start: {PostgresConnectorSup, :start_link, [connector_config]},
         type: :supervisor,
         restart: :temporary
