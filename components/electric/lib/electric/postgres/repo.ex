@@ -19,7 +19,11 @@ defmodule Electric.Postgres.Repo do
 
   def config(connector_config, opts) do
     origin = Connectors.origin(connector_config)
-    conn_opts = Connectors.get_connection_opts(connector_config)
+
+    {_, conn_opts} =
+      connector_config
+      |> Connectors.get_connection_opts()
+      |> Connectors.prepare_opts_for_connection()
 
     [
       name: name(origin),
@@ -28,11 +32,19 @@ defmodule Electric.Postgres.Repo do
       username: conn_opts.username,
       password: conn_opts.password,
       database: conn_opts.database,
-      ssl: conn_opts.ssl == :required,
+      ssl: ssl_opts(conn_opts.ssl, conn_opts[:ssl_opts]),
       pool_size: Keyword.get(opts, :pool_size, @default_pool_size),
       log: false,
       after_connect: {__MODULE__, :set_display_settings, []}
     ]
+  end
+
+  defp ssl_opts(false, _), do: false
+
+  defp ssl_opts(_, ssl_opts) do
+    with [] <- Keyword.take(ssl_opts, [:cacerts]) do
+      [verify: :verify_none]
+    end
   end
 
   def name(origin), do: :"#{inspect(__MODULE__)}:#{origin}"
