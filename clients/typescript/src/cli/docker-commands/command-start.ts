@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import { dedent, parsePgProxyPort } from '../utils'
 import { addOptionGroupToCommand, getConfig, Config } from '../config'
-import { dockerCompose } from './docker-utils'
+import { dockerCompose, dockerComposeUp } from './docker-utils'
 
 export function makeStartCommand() {
   const command = new Command('start')
@@ -79,9 +79,8 @@ export function start(options: StartSettings) {
     }
     console.log('Docker compose config:', dockerConfig)
 
-    const proc = dockerCompose(
-      'up',
-      [...(options.detach ? ['--detach'] : [])],
+    const proc = dockerComposeUp(
+      options.detach ? ['--detach'] : [],
       options.config.CONTAINER_NAME,
       dockerConfig
     )
