@@ -20,6 +20,18 @@ To see the complete change log for each new release, see the [Releases page](htt
 - [@electric-sql/prisma-generator](https://github.com/electric-sql/electric/blob/main/generator/CHANGELOG.md)
 
 
+## 2024-XX-XX - patch release
+
+Component | Version
+--------- | -------
+[Sync service][1] | [0.11.X](https://github.com/electric-sql/electric/blob/main/components/electric/CHANGELOG.md#011X)
+
+#### Compatibility notes
+
+**Sync service**
+
+- The default value for `DATABASE_REQUIRE_SSL` was reset to `false` in [v0.9.1](#2024-01-24---v09) by accident, after it had been set to `true` in v0.9.0. This release restores the intended behaviour of having `DATABASE_REQUIRE_SSL=true` by default. To use unencrypted database connections, you must explicitly configure Electric with `DATABASE_REQUIRE_SSL=false`.
+
 ## 2024-05-14 - v0.11
 
 [Announcement post](/blog/2024/05/14/electricsql-postgres-client-support).
