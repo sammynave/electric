@@ -111,10 +111,14 @@ if send_to_honeycomb? do
     otlp_headers: [{"x-honeycomb-team", honeycomb_api_key}],
     otlp_compression: :gzip
 else
-  config :opentelemetry, :processors,
-    otel_simple_processor: %{
-      exporter: {:otel_exporter_stdout, []}
-    }
+  if env!("OT_DEBUG_LOG_ENABLED", :boolean, nil) do
+    config :opentelemetry, :processors,
+      otel_simple_processor: %{
+        exporter: {:otel_exporter_stdout, []}
+      }
+  else
+    config :opentelemetry, :processors, []
+  end
 end
 
 ###
