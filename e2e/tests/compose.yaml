@@ -19,6 +19,7 @@ services:
       ELECTRIC_WRITE_TO_PG_MODE: "${ELECTRIC_WRITE_TO_PG_MODE:-logical_replication}"
       LOGICAL_PUBLISHER_HOST: electric_1
       PG_PROXY_LOG_LEVEL: info
+      LOG_LEVEL: "${LOG_LEVEL:-debug}"
     ports:
       - "5133:5133"
       # proxy access
@@ -35,6 +36,7 @@ services:
     extends:
       file: ../services_templates.yaml
       service: elixir_client
+    # network_mode: "host"
 
   elixir_client_2:
     extends:
