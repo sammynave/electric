@@ -1,5 +1,11 @@
 # @core/electric
 
+## 0.12.0
+
+### Minor Changes
+
+- a8eedad: feat: server-driven unsubscribes to allow clients to unsubscribe from shapes
+
 ## 0.11.1
 
 ### Patch Changes

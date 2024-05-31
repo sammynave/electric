@@ -1,5 +1,26 @@
 # @electric-sql/debug-toolbar
 
+## 2.0.0
+
+### Minor Changes
+
+- b966157: Add support for new shape sync API
+
+### Patch Changes
+
+- 6d4fb3d: Use shape sync status notifier for updating shapes tab.
+- f4af7f6: Guard against adding toolbar to DOM twice
+- 5f40b96: Remove source map files from npm package
+- 52265c8: Convert toolbar container into rounded border card
+- Updated dependencies [17e793c]
+- Updated dependencies [a8eedad]
+- Updated dependencies [d406e85]
+- Updated dependencies [237e323]
+- Updated dependencies [17e793c]
+- Updated dependencies [b966157]
+- Updated dependencies [276149d]
+  - electric-sql@0.12.0
+
 ## 1.2.0
 
 ### Minor Changes
